@@ -4,6 +4,7 @@
 import random
 import copy
 import pyxel
+import math
 
 class Carte:
     def __init__(self, couleur, valeur):
@@ -91,6 +92,7 @@ class App:
     def __init__(self):
         #deleteme
         self.hand = Paquet().prendre(7)
+        self.current_hand_pos = 0
 
         pyxel.init(128, 256)
         pyxel.load('res.pyxres')
@@ -102,10 +104,10 @@ class App:
 
     def draw(self):
         pyxel.cls(1)
-        pyxel.text(14, 16, 'C\'est le tour du Joueur 1', col=7)
+        pyxel.text(14, 16, "C'est le tour du Joueur 1", col=7)
         self.draw_buttons()
         self.draw_cards()
-        self.draw_cursor()
+        self.draw_cursor() 
 
     def draw_buttons(self):
         pyxel.blt(100, 100, 0, u=32, v=80, w=16, h=16, colkey=15, scale=2)
@@ -116,9 +118,21 @@ class App:
         pyxel.blt(20, 112, 0, u=0, v=0, w=16, h=16, colkey=15, scale=2)
         pyxel.blt(60, 112, 0, u=48, v=64, w=16, h=16, colkey=15, scale=2)
 
+        MAX_HAND = math.ceil(len(self.hand)/5)
+        pyxel.text(56, 184, str(self.current_hand_pos + 1) + '/' + str(MAX_HAND), 7)
+
+        if pyxel.btnp(pyxel.KEY_LEFT):
+            self.current_hand_pos -= 1
+            if self.current_hand_pos < 0:
+                self.current_hand_pos = MAX_HAND-1
+        elif pyxel.btnp(pyxel.KEY_RIGHT):
+            self.current_hand_pos += 1
+            if self.current_hand_pos >= MAX_HAND:
+                self.current_hand_pos = 0
+
         # bottom
         i = 16
-        for card in self.hand[:5]:
+        for card in self.hand[self.current_hand_pos*5:min((self.current_hand_pos*5)+5, len(self.hand))]:
             self.draw_card(i, 200, card)
             i += 20
 
