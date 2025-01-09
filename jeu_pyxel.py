@@ -100,6 +100,7 @@ class JeuUno:
         self.position = 0
         self.fin = False
         self.special_counter = 0
+        self.special_prochain = None
 
         pyxel.init(128, 256)
         pyxel.load('res.pyxres')
@@ -114,6 +115,7 @@ class JeuUno:
 
         if self.special_counter == 0:
             pyxel.cls(1)
+            self.special_text = ''
         else:
             i = (pyxel.frame_count // 2) % 4
             u = 64 + (i % 2)*8
@@ -133,20 +135,21 @@ class JeuUno:
             
 
             if self.special_counter == 0 and self.special_text.startswith("C'est le tour"):
-                if self.paquet.carte_dessus.valeur == 'skip':
+                if self.special_prochain and self.special_prochain.valeur == 'skip':
                     self.special_counter = 30
                     self.special_text = 'Saut de tour!'
-                elif self.paquet.carte_dessus.valeur == 'inverse':
+                elif self.special_prochain and self.special_prochain.valeur == 'inverse':
                     self.special_counter = 30
                     self.special_text = 'Saut de tour!'
             
             return
 
-        if self.paquet.carte_dessus.valeur in ('skip', 'inverse'):
+        if self.special_prochain and self.special_prochain.valeur in ('skip', 'inverse'):
             self.special_counter = -1
             self.special_text = f"C'est le tour du joueur {((self.position+1) % 2) + 1}"
             self.current_hand_pos = 0
             self.position = (self.position+1) % 2
+            self.special_prochain = None
 
         pyxel.text(14, 16, f"C'est le tour du Joueur {self.position+1}", col=7)
 
@@ -171,6 +174,8 @@ class JeuUno:
                     main.jouer(card)
                     print(f'vous avez joué {carte}')
                     bonne_entree = True
+                    if main.lire(card).valeur in ('skip', 'inverse'):
+                        self.special_prochain = main.lire(card)
             
             if bonne_entree:
                 if len(main) == 0:
