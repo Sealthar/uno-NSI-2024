@@ -60,13 +60,6 @@ class MainJoueur:
     def __init__(self, paquet):
         self.paquet = paquet
         self.main = self.paquet.prendre(7)
-        
-    def lister(self):
-        print('> Main:')
-        i = 0
-        for carte in self.main:
-            i += 1
-            print(f'> [{i}] {carte}')
     
     def prendre(self, n=1):
         if n == 1:
@@ -112,7 +105,6 @@ class JeuUno:
             pyxel.quit()
 
     def draw(self):
-        print(self.popup_queue)
         main = self.main_joueurs[self.position]
 
         if len(self.popup_queue) == 0:
@@ -153,7 +145,6 @@ class JeuUno:
             
             if bonne_entree:
                 if len(main) == 0:
-                    print(f'Joueur {self.position+1} vous avez gagné!!')
                     self.fin = True
                 else:
                     self.popup_queue.insert(0, f"C'est le tour du joueur {((self.position+1) % 2) + 1}")
