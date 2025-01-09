@@ -99,8 +99,9 @@ class JeuUno:
         self.current_hand_pos = 0
         self.position = 0
         self.fin = False
-        self.special_counter = 0
         self.special_prochain = None
+
+        self.popup_queue = []
 
         pyxel.init(128, 256)
         pyxel.load('res.pyxres')
@@ -111,46 +112,21 @@ class JeuUno:
             pyxel.quit()
 
     def draw(self):
+        print(self.popup_queue)
         main = self.main_joueurs[self.position]
 
-        if self.special_counter == 0:
+        if len(self.popup_queue) == 0:
             pyxel.cls(1)
-            self.special_text = ''
         else:
-            i = (pyxel.frame_count // 2) % 4
-            u = 64 + (i % 2)*8
-            v = 80 + (i // 2)*8
-            for y in range(0, 257, 16):
-                for x in range(0, 129, 16):
-                    pyxel.blt(x, y, 0, u, v, 8, 8, scale=2)
+            self.draw_scroll_bg()
+            self.draw_centered_text(self.popup_queue[0])
+            self.draw_cursor()
 
-            pyxel.text(64-2*len(self.special_text), 125, self.special_text, col=7)
-            self.draw_cursor() 
-
-            if self.special_counter > 0:
-                self.special_counter -= 1
-            else:
-                if pyxel.btnr(pyxel.MOUSE_BUTTON_LEFT):
-                    self.special_counter = 0
-            
-
-            if self.special_counter == 0 and self.special_text.startswith("C'est le tour"):
-                if self.special_prochain and self.special_prochain.valeur == 'skip':
-                    self.special_counter = 30
-                    self.special_text = 'Saut de tour!'
-                elif self.special_prochain and self.special_prochain.valeur == 'inverse':
-                    self.special_counter = 30
-                    self.special_text = 'Saut de tour!'
-            
+            if pyxel.btnr(pyxel.MOUSE_BUTTON_LEFT):
+                self.show_screen = False
+                self.popup_queue.pop(0)
             return
-
-        if self.special_prochain and self.special_prochain.valeur in ('skip', 'inverse'):
-            self.special_counter = -1
-            self.special_text = f"C'est le tour du joueur {((self.position+1) % 2) + 1}"
-            self.current_hand_pos = 0
-            self.position = (self.position+1) % 2
-            self.special_prochain = None
-
+        
         pyxel.text(14, 16, f"C'est le tour du Joueur {self.position+1}", col=7)
 
         self.draw_buttons()
@@ -158,12 +134,9 @@ class JeuUno:
         self.draw_cursor() 
 
         if card != None:
-            print('tour de joueur', self.position+1)
-
             bonne_entree = False
 
-            if card == -1:
-                print('passer. prise de 1')
+            if card == -1: # "pass"
                 main.prendre()
                 bonne_entree = True
             else:
@@ -171,27 +144,34 @@ class JeuUno:
                 carte_dessus = self.paquet.carte_dessus
 
                 if carte_dessus.couleur == carte.couleur or carte_dessus.valeur == carte.valeur:
+                    valeur = main.lire(card).valeur
                     main.jouer(card)
-                    print(f'vous avez joué {carte}')
                     bonne_entree = True
-                    if main.lire(card).valeur in ('skip', 'inverse'):
-                        self.special_prochain = main.lire(card)
+
+                    if valeur in ('skip', 'inverse'):
+                        self.popup_queue.append('Saut de tour, desole...')
             
             if bonne_entree:
                 if len(main) == 0:
                     print(f'Joueur {self.position+1} vous avez gagné!!')
                     self.fin = True
                 else:
-                    self.special_counter = -1
-                    self.special_text = f"C'est le tour du joueur {((self.position+1) % 2) + 1}"
+                    self.popup_queue.insert(0, f"C'est le tour du joueur {((self.position+1) % 2) + 1}")
                 
                 self.current_hand_pos = 0
                 self.position = (self.position+1) % 2
 
-            else:
-                print('mauvaise entrée')
+    def draw_centered_text(self, text, y=125, col=7):
+        pyxel.text(64-2*len(text), y, text, col)
 
 
+    def draw_scroll_bg(self):
+        i = (pyxel.frame_count // 2) % 4
+        u = 64 + (i % 2)*8
+        v = 80 + (i // 2)*8
+        for y in range(0, 257, 16):
+            for x in range(0, 129, 16):
+                pyxel.blt(x, y, 0, u, v, 8, 8, scale=2)
 
     def draw_buttons(self):
         pyxel.blt(100, 100, 0, u=32, v=80, w=16, h=16, colkey=15, scale=2)
