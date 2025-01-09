@@ -30,8 +30,8 @@ class Paquet:
                     self.cartes.append( Carte(couleur, numero) )
                     
                 # Cartes spéciaux
-                #self.cartes.append( Carte(couleur, 'skip') )
-                #self.cartes.append( Carte(couleur, 'inverse') )
+                self.cartes.append( Carte(couleur, 'skip') )
+                self.cartes.append( Carte(couleur, 'inverse') )
                 #self.cartes.append( Carte(couleur, 'prendre 2') )
         
         random.shuffle(self.cartes)
@@ -99,6 +99,7 @@ class JeuUno:
         self.current_hand_pos = 0
         self.position = 0
         self.fin = False
+        self.special_counter = 0
 
         pyxel.init(128, 256)
         pyxel.load('res.pyxres')
@@ -111,7 +112,42 @@ class JeuUno:
     def draw(self):
         main = self.main_joueurs[self.position]
 
-        pyxel.cls(1)
+        if self.special_counter == 0:
+            pyxel.cls(1)
+        else:
+            i = (pyxel.frame_count // 2) % 4
+            u = 64 + (i % 2)*8
+            v = 80 + (i // 2)*8
+            for y in range(0, 257, 16):
+                for x in range(0, 129, 16):
+                    pyxel.blt(x, y, 0, u, v, 8, 8, scale=2)
+
+            pyxel.text(64-2*len(self.special_text), 125, self.special_text, col=7)
+            self.draw_cursor() 
+
+            if self.special_counter > 0:
+                self.special_counter -= 1
+            else:
+                if pyxel.btnr(pyxel.MOUSE_BUTTON_LEFT):
+                    self.special_counter = 0
+            
+
+            if self.special_counter == 0 and self.special_text.startswith("C'est le tour"):
+                if self.paquet.carte_dessus.valeur == 'skip':
+                    self.special_counter = 30
+                    self.special_text = 'Saut de tour!'
+                elif self.paquet.carte_dessus.valeur == 'inverse':
+                    self.special_counter = 30
+                    self.special_text = 'Saut de tour!'
+            
+            return
+
+        if self.paquet.carte_dessus.valeur in ('skip', 'inverse'):
+            self.special_counter = -1
+            self.special_text = f"C'est le tour du joueur {((self.position+1) % 2) + 1}"
+            self.current_hand_pos = 0
+            self.position = (self.position+1) % 2
+
         pyxel.text(14, 16, f"C'est le tour du Joueur {self.position+1}", col=7)
 
         self.draw_buttons()
@@ -137,11 +173,15 @@ class JeuUno:
                     bonne_entree = True
             
             if bonne_entree:
-                self.current_hand_pos = 0
-                self.position = (self.position+1) % 2
                 if len(main) == 0:
                     print(f'Joueur {self.position+1} vous avez gagné!!')
                     self.fin = True
+                else:
+                    self.special_counter = -1
+                    self.special_text = f"C'est le tour du joueur {((self.position+1) % 2) + 1}"
+                
+                self.current_hand_pos = 0
+                self.position = (self.position+1) % 2
 
             else:
                 print('mauvaise entrée')
