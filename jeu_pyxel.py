@@ -21,8 +21,8 @@ class Paquet:
         
         for couleur in ('rouge', 'jaune', 'vert', 'bleu'):
             self.cartes.append( Carte(couleur, 0) )
-            self.cartes.append( Carte('special', '4 couleur') )
-            self.cartes.append( Carte('special', 'prendre 4') )
+            #self.cartes.append( Carte('special', '4 couleur') )
+           # self.cartes.append( Carte('special', 'prendre 4') )
             
             # Deux fois
             for n in range(2):
@@ -30,9 +30,9 @@ class Paquet:
                     self.cartes.append( Carte(couleur, numero) )
                     
                 # Cartes spéciaux
-                self.cartes.append( Carte(couleur, 'skip') )
-                self.cartes.append( Carte(couleur, 'inverse') )
-                self.cartes.append( Carte(couleur, 'prendre 2') )
+                #self.cartes.append( Carte(couleur, 'skip') )
+                #self.cartes.append( Carte(couleur, 'inverse') )
+                #self.cartes.append( Carte(couleur, 'prendre 2') )
         
         random.shuffle(self.cartes)
         
@@ -88,38 +88,79 @@ class MainJoueur:
         return len(self.main)
     
 
-class App:
+class JeuUno:
     def __init__(self):
-        #deleteme
-        self.hand = Paquet().prendre(7)
+        self.paquet = Paquet()
+        self.main_joueurs = []
+        for n in range(2):
+            main = MainJoueur(self.paquet)
+            self.main_joueurs.append(main)
+
         self.current_hand_pos = 0
+        self.position = 0
+        self.fin = False
 
         pyxel.init(128, 256)
         pyxel.load('res.pyxres')
         pyxel.run(self.update, self.draw)
 
     def update(self):
-        if pyxel.btnp(pyxel.KEY_Q):
+        if pyxel.btnp(pyxel.KEY_Q) or self.fin == True:
             pyxel.quit()
 
     def draw(self):
+        main = self.main_joueurs[self.position]
+
         pyxel.cls(1)
-        pyxel.text(14, 16, "C'est le tour du Joueur 1", col=7)
+        pyxel.text(14, 16, f"C'est le tour du Joueur {self.position+1}", col=7)
+
         self.draw_buttons()
-        self.draw_cards()
+        card = self.draw_cards(self.paquet.carte_dessus, main)
         self.draw_cursor() 
+
+        if card != None:
+            print('tour de joueur', self.position+1)
+
+            bonne_entree = False
+
+            if card == -1:
+                print('passer. prise de 1')
+                main.prendre()
+                bonne_entree = True
+            else:
+                carte = main.lire(card)
+                carte_dessus = self.paquet.carte_dessus
+
+                if carte_dessus.couleur == carte.couleur or carte_dessus.valeur == carte.valeur:
+                    main.jouer(card)
+                    print(f'vous avez joué {carte}')
+                    bonne_entree = True
+            
+            if bonne_entree:
+                self.current_hand_pos = 0
+                self.position = (self.position+1) % 2
+                if len(main) == 0:
+                    print(f'Joueur {self.position+1} vous avez gagné!!')
+                    self.fin = True
+
+            else:
+                print('mauvaise entrée')
+
+
 
     def draw_buttons(self):
         pyxel.blt(100, 100, 0, u=32, v=80, w=16, h=16, colkey=15, scale=2)
         pyxel.blt(100, 124, 0, u=16, v=80, w=16, h=16, colkey=15, scale=2)
 
-    def draw_cards(self):
+    def draw_cards(self, top_card, hand):
     # top
-        pyxel.blt(20, 112, 0, u=0, v=0, w=16, h=16, colkey=15, scale=2)
+        self.draw_card(20, 112, top_card)
         pyxel.blt(60, 112, 0, u=48, v=64, w=16, h=16, colkey=15, scale=2)
 
-        MAX_HAND = math.ceil(len(self.hand)/5)
+        MAX_HAND = math.ceil(len(hand)/5)
         pyxel.text(56, 184, str(self.current_hand_pos + 1) + '/' + str(MAX_HAND), 7)
+
+        card_played = None
 
         if pyxel.btnp(pyxel.KEY_LEFT):
             self.current_hand_pos -= 1
@@ -129,16 +170,35 @@ class App:
             self.current_hand_pos += 1
             if self.current_hand_pos >= MAX_HAND:
                 self.current_hand_pos = 0
+        elif pyxel.btnp(pyxel.KEY_1):
+            card_played = self.current_hand_pos*5
+        elif pyxel.btnp(pyxel.KEY_2):
+            card_played = self.current_hand_pos*5 + 1
+        elif pyxel.btnp(pyxel.KEY_3):
+            card_played = self.current_hand_pos*5 + 2
+        elif pyxel.btnp(pyxel.KEY_4):
+            card_played = self.current_hand_pos*5 + 3
+        elif pyxel.btnp(pyxel.KEY_5):
+            card_played = self.current_hand_pos*5 + 4
+        elif pyxel.btnp(pyxel.KEY_RETURN):
+            card_played = -1
+            pass
 
+        if card_played != None:
+            if card_played >= len(hand):
+                card_played = None
+        
         # bottom
         i = 16
-        for card in self.hand[self.current_hand_pos*5:min((self.current_hand_pos*5)+5, len(self.hand))]:
+        for card in hand.main[self.current_hand_pos*5:min((self.current_hand_pos*5)+5, len(hand))]:
             self.draw_card(i, 200, card)
             i += 20
 
         # arrows
         pyxel.blt(2, 200, 0, u=64, v=64, w=4, h=14, colkey=0, scale=1)
         pyxel.blt(122, 200, 0, u=68, v=64, w=4, h=14, colkey=0, scale=1)
+
+        return card_played
 
     def draw_cursor(self):
         pyxel.blt(pyxel.mouse_x-4, pyxel.mouse_y-2, 0, u=48, v=80, w=16, h=16, colkey=15, scale=1)
@@ -172,4 +232,4 @@ class App:
         pyxel.blt(x, y, 0, u, v, w=16, h=16, colkey=15, scale=2)
 
 
-app = App()
+app = JeuUno()
