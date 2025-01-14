@@ -14,7 +14,7 @@ class CreditsButton(ButtonSprite):
         super().__init__(64-8, 128+24-8, 32, 128, 16, 16, scale=2)
     
     def on_click(self):
-        self.game_manager.current_scene = 1
+        self.game_manager.current_scene = 4
 
 class SceneInit(Scene):
     def __init__(self):
