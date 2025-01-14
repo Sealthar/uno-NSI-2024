@@ -35,10 +35,9 @@ class Paquet:
                     self.cartes.append( Carte(couleur, numero) )
                     
                 # Cartes spéciaux
-                for x in range(10):
-                    self.cartes.append( Carte(couleur, 'skip') )
-                    self.cartes.append( Carte(couleur, 'inverse') )
-                    self.cartes.append( Carte(couleur, 'prendre 2') )
+                self.cartes.append( Carte(couleur, 'skip') )
+                self.cartes.append( Carte(couleur, 'inverse') )
+                self.cartes.append( Carte(couleur, 'prendre 2') )
 
         random.shuffle(self.cartes)
 
