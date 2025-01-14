@@ -1,93 +1,21 @@
-# Jeu NSI 2024
+# Jeu UNO
+# Classe de 1NSI 2024
 # Collaborateurs: Rayan, Lothar, Robert
 
-import random
-import copy
 import pyxel
 import math
 
-class Carte:
-    def __init__(self, couleur, valeur):
-        self.couleur = couleur
-        self.valeur = valeur
-        
-    def __repr__(self):
-        return f'(carte {self.couleur} "{self.valeur}")'
+from cartes import Carte, Paquet
 
-
-class Paquet:
-    def __init__(self):
-        self.cartes = []
-        
-        for couleur in ('rouge', 'jaune', 'vert', 'bleu'):
-            self.cartes.append( Carte(couleur, 0) )
-            #self.cartes.append( Carte('special', '4 couleur') )
-           # self.cartes.append( Carte('special', 'prendre 4') )
-            
-            # Deux fois
-            for n in range(2):
-                for numero in range(1, 10):
-                    self.cartes.append( Carte(couleur, numero) )
-                    
-                # Cartes spéciaux
-                self.cartes.append( Carte(couleur, 'skip') )
-                self.cartes.append( Carte(couleur, 'inverse') )
-                #self.cartes.append( Carte(couleur, 'prendre 2') )
-        
-        random.shuffle(self.cartes)
-        
-        self.carte_dessus = self.prendre()
-        while self.carte_dessus.couleur == 'special' or self.carte_dessus.valeur == 'prendre 2':
-            self.deposer(self.carte_dessus)
-            self.carte_dessus = self.prendre()
-        
-    def prendre(self, n_cartes=1):
-        if n_cartes == 1:
-            return self.cartes.pop()
-        else:
-            cartes = []
-            for i in range(n_cartes):
-                cartes.append(self.cartes.pop())
-            return cartes
-        
-    def deposer(self, carte):
-        idx = random.randint(0, len(self.cartes))
-        self.cartes.insert(idx, self.carte_dessus)
-        self.carte_dessus = carte
-
-
-class MainJoueur:
-    def __init__(self, paquet):
-        self.paquet = paquet
-        self.main = self.paquet.prendre(7)
-    
-    def prendre(self, n=1):
-        if n == 1:
-            self.main.append(self.paquet.prendre(n))
-        else:
-            self.main += self.paquet.prendre(n)
-            
-        
-    def ajouter(self, carte):
-        self.main.append(carte)
-        
-    def lire(self, n):
-        return self.main[n]
-    
-    def jouer(self, n):
-        self.paquet.deposer(self.main.pop(n))
-        
-    def __len__(self):
-        return len(self.main)
-    
 
 class JeuUno:
     def __init__(self):
         self.paquet = Paquet()
-        self.main_joueurs = []
+
+        self.joueurs = []
         for n in range(2):
-            main = MainJoueur(self.paquet)
-            self.main_joueurs.append(main)
+            main = self.paquet.piocher_n(7)
+            self.joueurs.append(main)
 
         self.current_hand_pos = 0
         self.position = 0
@@ -105,7 +33,7 @@ class JeuUno:
             pyxel.quit()
 
     def draw(self):
-        main = self.main_joueurs[self.position]
+        main = self.joueurs[self.position]
 
         if len(self.popup_queue) == 0:
             pyxel.cls(1)
@@ -113,6 +41,9 @@ class JeuUno:
             self.draw_scroll_bg()
             self.draw_centered_text(self.popup_queue[0])
             self.draw_cursor()
+
+            if self.popup_queue[0] == 'Saut de tour, desole...':
+                self.position = (self.position+1) % 2
 
             if pyxel.btnr(pyxel.MOUSE_BUTTON_LEFT):
                 self.show_screen = False
@@ -122,25 +53,25 @@ class JeuUno:
         pyxel.text(14, 16, f"C'est le tour du Joueur {self.position+1}", col=7)
 
         self.draw_buttons()
-        card = self.draw_cards(self.paquet.carte_dessus, main)
+        carte_choisi_index = self.draw_cards(top_card=self.paquet.top(), hand=main)
         self.draw_cursor() 
 
-        if card != None:
+        if carte_choisi_index != None:
             bonne_entree = False
 
-            if card == -1: # "pass"
-                main.prendre()
+            if carte_choisi_index == -1:
+                # "pass"
+                main.append(self.paquet.piocher())
                 bonne_entree = True
             else:
-                carte = main.lire(card)
-                carte_dessus = self.paquet.carte_dessus
+                carte_choisi = main[carte_choisi_index]
+                carte_dessus = self.paquet.top()
 
-                if carte_dessus.couleur == carte.couleur or carte_dessus.valeur == carte.valeur:
-                    valeur = main.lire(card).valeur
-                    main.jouer(card)
+                if carte_dessus.couleur == carte_choisi.couleur or carte_dessus.valeur == carte_choisi.valeur:
+                    self.paquet.deposer(main.pop(carte_choisi_index))
                     bonne_entree = True
 
-                    if valeur in ('skip', 'inverse'):
+                    if carte_choisi.valeur in ('skip', 'inverse'):
                         self.popup_queue.append('Saut de tour, desole...')
             
             if bonne_entree:
@@ -206,7 +137,7 @@ class JeuUno:
         
         # bottom
         i = 16
-        for card in hand.main[self.current_hand_pos*5:min((self.current_hand_pos*5)+5, len(hand))]:
+        for card in hand[self.current_hand_pos*5:min((self.current_hand_pos*5)+5, len(hand))]:
             self.draw_card(i, 200, card)
             i += 20
 
