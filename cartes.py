@@ -35,14 +35,15 @@ class Paquet:
                     self.cartes.append( Carte(couleur, numero) )
                     
                 # Cartes spéciaux
-                self.cartes.append( Carte(couleur, 'skip') )
-                self.cartes.append( Carte(couleur, 'inverse') )
-                #self.cartes.append( Carte(couleur, 'prendre 2') )
+                for x in range(10):
+                    self.cartes.append( Carte(couleur, 'skip') )
+                    self.cartes.append( Carte(couleur, 'inverse') )
+                    self.cartes.append( Carte(couleur, 'prendre 2') )
 
         random.shuffle(self.cartes)
 
         # Pour qu'on n'ait pas une carte "special" au dessus
-        while self.top().couleur == 'special' or self.top().valeur == 'prendre 2':
+        while self.top().couleur == 'special' or self.top().valeur in ('prendre 2', 'skip', 'inverse'):
             random.shuffle(self.cartes)
 
     def top(self):

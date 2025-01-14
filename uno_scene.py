@@ -94,6 +94,8 @@ class GraphicCard(GraphicSprite):
 
 class GraphicHand(Sprite):
     def __init__(self, x, y):
+        super().__init__()
+
         self.x = x
         self.y = y
         
@@ -102,21 +104,19 @@ class GraphicHand(Sprite):
         self.last_mouse_x = 0
 
         self.cards = []
-        self.hand = []
 
         self.selected_card = None
     
     def set_hand(self, hand):
-        if hand != self.hand:
-            self.hand = hand
-            self.cards = []
-            for card in hand:
-                graphic_card = GraphicCard(0, self.y)
-                graphic_card.set_card(card)
-                self.cards.append(graphic_card)
+        self.cards = []
+        for card in hand:
+            graphic_card = GraphicCard(0, self.y)
+            graphic_card.set_card(card)
+            self.cards.append(graphic_card)
 
-            cards_width = 36*len(hand) + 14 - 128
-            self.min_x = self.max_x - cards_width
+        cards_width = 36*len(hand) + 14 - 128
+        self.min_x = self.max_x - cards_width
+        self.x = self.max_x
 
     def draw(self):
         self.selected_card = None
@@ -152,6 +152,24 @@ class GraphicHand(Sprite):
         for card in self.cards:
             card.update()
 
+class SwapHandsGraphic(GraphicSprite):
+    def __init__(self, x, y):
+        super().__init__(x, y, 32, 112, 16, 16, scale=4)
+        self.timer = 60
+        self.type = None
+
+    def draw(self):
+        if self.type == 'prendre 2':
+            self.u = 16
+            self.v = 96
+        elif self.type == 'skip':
+            self.u = 32
+            self.v = 112
+
+        super().draw()
+        pyxel.blt(self.x, self.y + ((pyxel.frame_count // 5) % 4) * 4, 0, 48, 112, 16, 16, colkey=15, scale=4)
+        self.timer -= 1
+
 class SceneUno(Scene):
     def __init__(self):
         super().__init__()
@@ -164,46 +182,84 @@ class SceneUno(Scene):
             self.joueurs.append(main)
 
         self.tour = 0
+        self.avant_action = None
+        self.update_hand = True
 
         self.graphic_hand = GraphicHand(16, 200)
         self.top_graphic_card = GraphicCard(20, 112, bobbles=False)
         self.discard_pile = DiscardPile(60, 112)
-        self.uno_button = UnoButton(100, 100)
-        self.skip_button = SkipButton(100, 124)
+        #self.uno_button = UnoButton(100, 100)
+        #self.skip_button = SkipButton(100, 124)
+        self.skip_button = SkipButton(100, 112)
         self.player_text = PlayerText(14, 16)
+        self.swap_hands = SwapHandsGraphic(64-8, 128-8)
+        self.swap_hands.visible = False
 
         self.sprites.append(self.graphic_hand)
         self.sprites.append(self.top_graphic_card)
         self.sprites.append(self.discard_pile)
-        self.sprites.append(self.uno_button)
+        #self.sprites.append(self.uno_button)
         self.sprites.append(self.skip_button)
         self.sprites.append(self.player_text)
+        self.sprites.append(self.swap_hands)
         self.sprites.append( CursorSprite() )
 
     def draw(self):
         hand = self.joueurs[self.tour]
 
+        if self.update_hand:
+            self.graphic_hand.set_hand(hand)
+        self.update_hand = False
+
         self.top_graphic_card.set_card(self.paquet.top())
-        self.graphic_hand.set_hand(hand)
         self.player_text.turn = self.tour
         super().draw()
 
         bonne_entree = False
 
-        if self.skip_button.clicked:
+        if self.avant_action in ('skip', 'prendre 2'):
+            self.swap_hands.visible = True
+            self.swap_hands.type = self.avant_action
+
+            if self.swap_hands.timer < 0:
+                self.swap_hands.visible = False
+                self.swap_hands.timer = 60
+                
+                if self.avant_action == 'skip':
+                    bonne_entree = True
+                elif self.avant_action == 'prendre 2':
+                    for carte in self.paquet.piocher_n(2):
+                        hand.append(carte)
+                        self.update_hand = True
+
+                self.avant_action = None
+
+        if self.skip_button.clicked and not bonne_entree:
+            self.avant_action = None
+
             self.skip_button.clicked = False
             hand.append(self.paquet.piocher())
             bonne_entree = True
 
-        if self.graphic_hand.selected_card != None:
+        if self.graphic_hand.selected_card != None and not bonne_entree:
+            self.avant_action = None
+            
             carte_index = self.graphic_hand.selected_card
             carte_choisi = hand[carte_index]
             carte_dessus = self.paquet.top()
 
             if carte_dessus.couleur == carte_choisi.couleur or carte_dessus.valeur == carte_choisi.valeur:
                 self.paquet.deposer(hand.pop(carte_index))
+
+                if carte_choisi.valeur in ('skip', 'inverse'):                    
+                    self.avant_action = 'skip'
+                elif carte_choisi.valeur == 'prendre 2':
+                    self.avant_action = 'prendre 2'
+                
                 bonne_entree = True
 
         if bonne_entree:
             self.tour = (self.tour + 1) % 2
             self.game_manager.current_scene = self.tour + 2
+            self.update_hand = True
+

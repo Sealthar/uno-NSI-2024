@@ -17,10 +17,12 @@ class Scene:
         pyxel.cls(self.bg_color)
         for sprite in self.sprites:
             sprite.game_manager = self.game_manager
-            sprite.draw()
+            if sprite.visible:
+                sprite.draw()
     
     def update(self):
         for sprite in self.sprites:
+            sprite.game_manager = self.game_manager
             sprite.update()
 
 class GameManager:
@@ -60,7 +62,7 @@ class Sprite:
     """
 
     def __init__(self):
-        pass
+        self.visible = True
 
     def draw(self):
         """
@@ -104,6 +106,8 @@ class GraphicSprite(Sprite):
     """
 
     def __init__(self, x, y, u, v, w, h, colkey=15, scale=1):
+        super().__init__()
+
         self.x, self.y = x, y
         self.u, self.v = u, v
         self.w, self.h = w, h
